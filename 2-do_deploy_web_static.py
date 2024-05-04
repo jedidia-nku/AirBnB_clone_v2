@@ -1,37 +1,30 @@
 #!/usr/bin/python3
-from fabric.api import *
-from os import path
+"""
+Fabric script based on the file 1-pack_web_static.py that distributes an
+archive to the web servers
+"""
 
-
-env.hosts = ["54.164.5.211", "100.26.122.39"]
-env.user = "ubuntu"
-env.key_filename = '~/.ssh/id_rsa'
+from fabric.api import put, run, env
+from os.path import exists
+env.hosts = ['54.89.109.87', '100.25.190.21']
 
 
 def do_deploy(archive_path):
-    """ a Fabric script that distributes an archive to your web servers"""
-
-    if not path.exists(archive_path):
+    """distributes an archive to the web servers"""
+    if exists(archive_path) is False:
         return False
     try:
-        put(archive_path, "/tmp/")
-
-        timestamp = archive_path[-18:-4]
-        run(f"sudo mkdir -p /data/web_static/releases/web_static_{timestamp}")
-        run(f"sudo tar -xzf /tmp/web_static_{timestamp}.tgz -C \
-/data/web_static/releases/web_static_{timestamp}/")
-        run(f"sudo rm /tmp/web_static_{timestamp}.tgz")
-
-        # move contents into host web_static
-        run(f"sudo mv /data/web_static/releases/web_static_{timestamp}/web_static/* \
-/data/web_static/releases/web_static_{timestamp}/")
-        # remove extraneous web_static dir
-        run(f"sudo rm -rf /data/web_static/releases/\
-web_static_{timestamp}/web_static")
-        run(f"sudo rm -fr /data/web_static/current")
-        run(f"sudo ln -s /data/web_static/releases/web_static_{timestamp}/ \
-/data/web_static/current")
-    except Exception:
+        file_n = archive_path.split("/")[-1]
+        no_ext = file_n.split(".")[0]
+        path = "/data/web_static/releases/"
+        put(archive_path, '/tmp/')
+        run('mkdir -p {}{}/'.format(path, no_ext))
+        run('tar -xzf /tmp/{} -C {}{}/'.format(file_n, path, no_ext))
+        run('rm /tmp/{}'.format(file_n))
+        run('mv {0}{1}/web_static/* {0}{1}/'.format(path, no_ext))
+        run('rm -rf {}{}/web_static'.format(path, no_ext))
+        run('rm -rf /data/web_static/current')
+        run('ln -s {}{}/ /data/web_static/current'.format(path, no_ext))
+        return True
+    except:
         return False
-
-    return True
